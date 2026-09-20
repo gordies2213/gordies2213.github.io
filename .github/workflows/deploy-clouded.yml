@@ -35,6 +35,10 @@ jobs:
               raise SystemExit(f"Expected 4 release chunks, found {len(parts)}")
 
           encoded = "".join(p.read_text(encoding="utf-8").strip() for p in parts)
+
+          # The stored release is intentionally unpadded base64.
+          encoded += "=" * (-len(encoded) % 4)
+
           payload = base64.b64decode(encoded, validate=True)
           html = gzip.decompress(payload)
 
