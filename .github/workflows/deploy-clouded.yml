@@ -1,8 +1,11 @@
-name: Deploy CLOUDED v7.9.0 STABLE
+name: Deploy CLOUDED Current
 
 on:
   push:
     branches: [main]
+    paths:
+      - "clouded/**"
+      - ".github/workflows/deploy-clouded.yml"
   workflow_dispatch:
 
 permissions:
@@ -11,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: clouded-pages
   cancel-in-progress: true
 
 jobs:
@@ -21,38 +24,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Rebuild exact CLOUDED v7.9.0 STABLE release
+      - name: Validate current CLOUDED build
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import base64
-          import gzip
-          import hashlib
+          test -f clouded/index.html
+          test -f clouded/manifest.json
+          test -f clouded/service-worker.js
+          grep -q 'id="importer"' clouded/index.html
+          grep -q 'cloudBackgroundReconcile' clouded/index.html
+          grep -q 'SUPABASE_URL' clouded/index.html
+          echo "CLOUDED current build validation passed."
 
-          parts = sorted(Path(".release").glob("v790.part*"))
-          if len(parts) != 4:
-              raise SystemExit(f"Expected 4 release chunks, found {len(parts)}")
-
-          encoded = "".join(p.read_text(encoding="utf-8").strip() for p in parts)
-
-          # The stored release is intentionally unpadded base64.
-          encoded += "=" * (-len(encoded) % 4)
-
-          payload = base64.b64decode(encoded, validate=True)
-          html = gzip.decompress(payload)
-
-          if b"7.9.0-stable" not in html:
-              raise SystemExit("Release stamp 7.9.0-stable was not found; refusing to deploy.")
-
-          out = Path("_site")
-          out.mkdir(exist_ok=True)
-          (out / "index.html").write_bytes(html)
-          (out / ".nojekyll").write_text("", encoding="utf-8")
-
-          print(f"Rebuilt index.html: {len(html)} bytes")
-          print("SHA256:", hashlib.sha256(html).hexdigest())
-          PY
+      - name: Prepare GitHub Pages site
+        shell: bash
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp clouded/index.html _site/index.html
+          cp clouded/manifest.json _site/manifest.json
+          cp clouded/service-worker.js _site/service-worker.js
+          touch _site/.nojekyll
+          echo "Prepared current CLOUDED build for deployment."
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -69,6 +61,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy current CLOUDED to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
