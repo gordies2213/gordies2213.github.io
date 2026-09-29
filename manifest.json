@@ -1,0 +1,10 @@
+{
+  "name": "CLOUDED",
+  "short_name": "CLOUDED",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050605",
+  "theme_color": "#0a0b09",
+  "description": "Tania's private writing universe."
+}
